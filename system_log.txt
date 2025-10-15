@@ -1,0 +1,42 @@
+2025-10-14T21:38:27.508154600 | System started by Doctor (doc1)
+2025-10-14T21:39:07.416819200 | Doctor prescribed med1 for ali
+2025-10-14T21:39:42.284382900 | Doctor prescribed med2 for ali
+2025-10-14T21:41:15.318965600 | System started by Manager (manager)
+2025-10-14T21:41:57.367787300 | Added staff: Nurse (n1)
+2025-10-14T21:42:43.448417600 | System started by Manager (manager)
+2025-10-14T21:43:14.142608700 | Added staff: Nurse (n1)
+2025-10-14T21:43:34.318586100 | System started by Nurse (nurse1)
+2025-10-14T21:47:45.819857 | System started by Nurse (nurse1)
+2025-10-14T21:48:18.803102400 | System started by Doctor (doc1)
+2025-10-14T21:48:40.583021300 | Doctor prescribed med1 for ali
+2025-10-14T21:49:01.393526800 | System started by Nurse (nurse1)
+2025-10-14T22:05:16.267506 | System started by Doctor (doc1)
+2025-10-14T22:05:33.964417300 | Doctor prescribed med1 for ali
+2025-10-14T22:05:47.310234200 | Doctor modified prescription for ali
+2025-10-14T22:06:08.656763 | System started by Nurse (nurse1)
+2025-10-14T22:06:29.876292700 | System started by Manager (manager)
+2025-10-14T22:14:40.875296800 | Manager modified staff details for doc1
+2025-10-14T22:36:40.476656200 | System started by Doctor (doc1)
+2025-10-14T22:37:04.789704700 | Doctor modified prescription for ali
+2025-10-14T22:49:40.749398200 | System started by Manager (manager)
+2025-10-14T22:50:44.624048100 | Manager modified staff details for doc1
+2025-10-14T22:56:34.631232200 | System started by Manager (manager)
+2025-10-14T22:57:37.668296700 | System started by Nurse (nurse1)
+2025-10-14T22:57:51.981151400 | Administered med22 to ali by Nurse nurse1
+2025-10-14T22:58:23.119268 | Moved resident from Ward1_Room2_Bed2 to Ward2_Room1_Bed1
+2025-10-15T06:48:49.710853700 | System started by Manager (manager)
+2025-10-15T06:48:54.009659200 | User manager logged out.
+2025-10-15T06:57:08.840265900 | System started by Manager (manager)
+2025-10-15T06:58:58.985289 | Manager added shift for d1
+2025-10-15T06:59:03.914977300 | User manager logged out.
+2025-10-15T07:06:42.531876300 | System started by Nurse (nurse1)
+2025-10-15T07:09:08.364959100 | Administered med22 to ali by Nurse nurse1
+2025-10-15T19:32:08.695623800 | System started by Manager (manager)
+2025-10-15T19:32:53.361825 | Added staff: Doctor (doc2)
+2025-10-15T19:33:37.416025200 | Manager added shift for doc2
+2025-10-15T19:33:45.945078900 | User manager logged out.
+2025-10-15T19:34:20.441077200 | System started by Manager (manager)
+2025-10-15T19:36:46.113835100 | Added staff: Doctor (doc2)
+2025-10-15T19:37:13.484369700 | User manager logged out.
+2025-10-15T19:37:22.502200100 | System started by Doctor (doc2)
+2025-10-15T20:13:18.919823900 | System started by Manager (manager)

@@ -1,419 +1,643 @@
 package FinalProject;
-
-import java.util.*;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.*;
+import javax.swing.*;
+import java.awt.*;
 import java.io.*;
 import java.nio.file.*;
 import java.time.LocalDateTime;
-import javax.swing.*;
-import java.awt.*;
 
-public class CareHomeManagementSystem extends JFrame {
+//Main class
+public class CareHomeManagementSystem extends JFrame
+{
+ Map<String,Bed> beds = new HashMap<>();
+ Map<String,JButton> bedButtons = new HashMap<>();
+ JTextArea logArea = new JTextArea(8,40);
+ Staff currentUser;
+ List<Staff> staffList = new ArrayList<>();
+ Map<String,Shift> shifts = new HashMap<>();
 
-    // beds and buttons
-    private final Map<String, Bed> beds = new HashMap<>();
-    private final Map<String, JButton> bedButtons = new HashMap<>();
-    private final JTextArea logArea = new JTextArea(8, 40);
+ static String STAFF_FILE = "staff.csv";
+ static String RESIDENT_FILE = "residents.csv";
+ static String PRESCRIPTION_FILE = "prescriptions.csv";
+ static String LOG_FILE = "system_log.txt";
+ static String SHIFT_FILE = "shifts.csv";
 
-    // current user and staff list
-    private Staff currentUser;
-    private List<Staff> staffList = new ArrayList<>();
+ // constructor
+ public CareHomeManagementSystem()
+ {
+     super("RMIT Care Home System");
+     setDefaultCloseOperation(EXIT_ON_CLOSE);
+     setSize(1050,750);
+     setLayout(new BorderLayout());
 
-    // file names
-    private static final String STAFF_FILE = "staff.csv";
-    private static final String RESIDENT_FILE = "residents.csv";
+     staffList = loadStaffFromCSV(STAFF_FILE);
+     loadShiftsFromCSV();
 
-    // constructor
-    public CareHomeManagementSystem() {
-        super("RMIT Care Home Management System");
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setSize(1050, 750);
-        setLayout(new BorderLayout());
+     if(!login())
+     {
+         JOptionPane.showMessageDialog(this,"Login failed! Exiting.");
+         System.exit(0);
+     }
 
-        // load staff
-        staffList = loadStaffFromCSV(STAFF_FILE);
+     JPanel wardsPanel = createWardsPanel();
+     add(wardsPanel,BorderLayout.CENTER);
 
-        // login
-        if (!login()) {
-            JOptionPane.showMessageDialog(this, "Login failed! Exiting.");
-            System.exit(0);
-        }
+     loadResidentsFromCSV(RESIDENT_FILE);
+     loadPrescriptionsFromCSV(PRESCRIPTION_FILE);
+     updateBedButtons();
 
-        // wards panel
-        JPanel wardsPanel = createWardsPanel();
-        add(wardsPanel, BorderLayout.CENTER);
+     logArea.setEditable(false);
+     add(new JScrollPane(logArea),BorderLayout.SOUTH);
 
-        // load residents
-        loadResidentsFromCSV(RESIDENT_FILE);
-        updateBedButtons();
+     JPanel topControls = new JPanel();
 
-        // log area
-        logArea.setEditable(false);
-        add(new JScrollPane(logArea), BorderLayout.SOUTH);
+     if(currentUser.getRole().equals("Manager"))
+     {
+         JButton addStaffBtn = new JButton("Add Staff");
+         JButton modifyStaffBtn = new JButton("Modify Staff");
+         JButton addResidentBtn = new JButton("Add Resident");
+         JButton addShiftBtn = new JButton("Add Shift");
+         JButton modifyShiftBtn = new JButton("Modify Shift");
 
-        // manager buttons
-        JPanel topControls = new JPanel();
-        if (currentUser.getRole().equals("Manager")) {
-            JButton addStaffBtn = new JButton("Add Staff");
-            JButton addResidentBtn = new JButton("Add Resident");
+         addStaffBtn.addActionListener(e->addStaff());
+         modifyStaffBtn.addActionListener(e->modifyStaff());
+         addResidentBtn.addActionListener(e->addResidentAction());
+         addShiftBtn.addActionListener(e->addShift());
+         modifyShiftBtn.addActionListener(e->modifyShift());
 
-            addStaffBtn.addActionListener(e -> addStaff());
-            addResidentBtn.addActionListener(e -> addResidentAction());
+         topControls.add(addStaffBtn);
+         topControls.add(modifyStaffBtn);
+         topControls.add(addResidentBtn);
+         topControls.add(addShiftBtn);
+         topControls.add(modifyShiftBtn);
+     }
 
-            topControls.add(addStaffBtn);
-            topControls.add(addResidentBtn);
-        }
+     if(currentUser.getRole().equals("Doctor") || currentUser.getRole().equals("Nurse"))
+     {
+         JButton viewShiftBtn = new JButton("View My Shift");
+         viewShiftBtn.addActionListener(e->viewMyShift());
+         topControls.add(viewShiftBtn);
+     }
 
-        add(topControls, BorderLayout.NORTH);
+     JButton logoutBtn = new JButton("Log Out");
+     logoutBtn.addActionListener(e->logoutAction());
+     topControls.add(logoutBtn);
 
-        log("System started by " + currentUser.getRole() + " (" + currentUser.getUserID() + ")");
-    }
+     add(topControls,BorderLayout.NORTH);
+     log("System started by "+currentUser.getRole()+" ("+currentUser.getUserID()+")");
+ }
 
-    // login stuff
-    private boolean login() {
-        JPanel panel = new JPanel(new GridLayout(2, 2));
-        JTextField userField = new JTextField();
-        JPasswordField passField = new JPasswordField();
+ // logout
+ private void logoutAction()
+ {
+     int confirm = JOptionPane.showConfirmDialog(this,"Are you sure you want to log out?","Log Out",JOptionPane.YES_NO_OPTION);
+     if(confirm==JOptionPane.YES_OPTION)
+     {
+         saveAllResidentsToCSV();
+         saveAllPrescriptionsToCSV();
+         saveShiftsToCSV();
+         log("User "+currentUser.getUserID()+" logged out.");
+         JOptionPane.showMessageDialog(this,"Logged out successfully!");
+         dispose();
+         new CareHomeManagementSystem().setVisible(true);
+     }
+ }
 
-        panel.add(new JLabel("Username:"));
-        panel.add(userField);
-        panel.add(new JLabel("Password:"));
-        panel.add(passField);
+ // add shift (manager)
+ private void addShift()
+ {
+     String staffID = JOptionPane.showInputDialog("Enter Staff ID:");
+     if(staffID==null) return;
 
-        int result = JOptionPane.showConfirmDialog(this, panel, "Login", JOptionPane.OK_CANCEL_OPTION);
-        if (result != JOptionPane.OK_OPTION) return false;
+     String date = JOptionPane.showInputDialog("Enter Date (YYYY-MM-DD):");
+     String start = JOptionPane.showInputDialog("Start Time (HH:MM):");
+     String end = JOptionPane.showInputDialog("End Time (HH:MM):");
 
-        String username = userField.getText().trim();
-        String password = new String(passField.getPassword());
+     if(date==null||start==null||end==null) return;
 
-        for (Staff s : staffList) {
-            if (s.getUserID().equals(username) && s.getPassword().equals(password)) {
-                currentUser = s;
-                return true;
-            }
-        }
+     Shift s = new Shift(staffID,date,start,end);
+     shifts.put(staffID,s);
+     saveShiftsToCSV();
+     log("Manager added shift for "+staffID);
+     JOptionPane.showMessageDialog(this,"Shift added for "+staffID);
+ }
 
-        JOptionPane.showMessageDialog(this, "Invalid username or password.");
-        return login(); // retry
-    }
+ // modify shift (manager)
+ private void modifyShift()
+ {
+     String staffID = JOptionPane.showInputDialog("Enter Staff ID to modify:");
+     if(staffID==null) return;
+     Shift s = shifts.get(staffID);
+     if(s==null){ JOptionPane.showMessageDialog(this,"No shift found!"); return; }
 
-    // wards and beds
-    private JPanel createWardsPanel() {
-        JPanel wardsPanel = new JPanel(new GridLayout(1, 2, 10, 10));
+     String date = JOptionPane.showInputDialog("Date:",s.date);
+     String start = JOptionPane.showInputDialog("Start:",s.startTime);
+     String end = JOptionPane.showInputDialog("End:",s.endTime);
+
+     if(date!=null) s.date=date;
+     if(start!=null) s.startTime=start;
+     if(end!=null) s.endTime=end;
+
+     shifts.put(staffID,s);
+     saveShiftsToCSV();
+     log("Manager modified shift for "+staffID);
+     JOptionPane.showMessageDialog(this,"Shift updated.");
+ }
+
+ // view shift (doctor/nurse)
+ private void viewMyShift()
+ {
+     Shift s = shifts.get(currentUser.getID());
+     if(s==null){ JOptionPane.showMessageDialog(this,"No shift assigned."); return; }
+
+     String msg = "Shift Info:\nDate: "+s.date+"\nStart: "+s.startTime+"\nEnd: "+s.endTime;
+     JOptionPane.showMessageDialog(this,msg,"My Shift",JOptionPane.INFORMATION_MESSAGE);
+ }
+
+ // load shifts
+ private void loadShiftsFromCSV()
+ {
+     shifts.clear();
+     try(BufferedReader br = new BufferedReader(new FileReader(SHIFT_FILE)))
+     {
+         String line;
+         while((line=br.readLine())!=null)
+         {
+             String[] p = line.split(",");
+             if(p.length>=4)
+             {
+                 Shift s = new Shift(p[0],p[1],p[2],p[3]);
+                 shifts.put(p[0],s);
+             }
+         }
+     }
+     catch(IOException e){ }
+ }
+
+ // save shifts
+ private void saveShiftsToCSV()
+ {
+     try(PrintWriter pw = new PrintWriter(new FileWriter(SHIFT_FILE)))
+     {
+         for(Shift s:shifts.values())
+         {
+             pw.println(s.toCSV());
+         }
+     }
+     catch(IOException e){ }
+ }
+
+ // login
+ private boolean login()
+ {
+     JPanel panel = new JPanel(new GridLayout(2,2));
+     JTextField userField = new JTextField();
+     JPasswordField passField = new JPasswordField();
+     panel.add(new JLabel("Username:"));
+     panel.add(userField);
+     panel.add(new JLabel("Password:"));
+     panel.add(passField);
+
+     int res = JOptionPane.showConfirmDialog(this,panel,"Login",JOptionPane.OK_CANCEL_OPTION);
+     if(res!=JOptionPane.OK_OPTION) return false;
+
+     String username = userField.getText().trim();
+     String password = new String(passField.getPassword());
+
+     for(Staff s:staffList)
+     {
+         if(s.login(username,password))
+         {
+             currentUser = s;
+             return true;
+         }
+     }
+
+     JOptionPane.showMessageDialog(this,"Invalid username or password.");
+     return login();
+ }
+
+    // create wards
+    private JPanel createWardsPanel()
+    {
+        JPanel wardsPanel = new JPanel(new GridLayout(1,2,10,10));
         wardsPanel.add(createWardPanel("Ward 1"));
         wardsPanel.add(createWardPanel("Ward 2"));
         return wardsPanel;
     }
 
-    private JPanel createWardPanel(String wardName) {
-        JPanel wardPanel = new JPanel(new GridLayout(3, 2, 8, 8));
+    private JPanel createWardPanel(String wardName)
+    {
+        JPanel wardPanel = new JPanel(new GridLayout(3,2,8,8));
         wardPanel.setBorder(BorderFactory.createTitledBorder(wardName));
+        int[] bedCounts = {1,2,4,4, 3,2};
 
-        int[] bedCounts = {1, 2, 4, 4, 3, 2};
+        for(int room=1;room<=6;room++)
+        {
+            JPanel roomPanel = new JPanel(new GridLayout(2,2,4,4));
+            roomPanel.setBorder(BorderFactory.createTitledBorder("Room "+room));
+            int bedsInRoom = bedCounts[room-1];
 
-        for (int room = 1; room <= 6; room++) {
-            JPanel roomPanel = new JPanel(new GridLayout(2, 2, 4, 4));
-            roomPanel.setBorder(BorderFactory.createTitledBorder("Room " + room));
-            int bedsInRoom = bedCounts[room - 1];
-
-            for (int b = 1; b <= bedsInRoom; b++) {
-                String bedID = wardName.replace(" ", "") + "_Room" + room + "_Bed" + b;
-                Bed bed = beds.getOrDefault(bedID, new Bed(bedID, null));
-                beds.put(bedID, bed);
+            for(int b=1;b<=bedsInRoom;b++)
+            {
+                String bedID = wardName.replace(" ","")+"_Room"+room+"_Bed"+b;
+                Bed bed = beds.getOrDefault(bedID,new Bed(bedID,null));
+                beds.put(bedID,bed);
 
                 JButton bedButton = new JButton("Empty");
                 bedButton.setBackground(Color.LIGHT_GRAY);
                 bedButton.setToolTipText(bedID);
 
-                bedButton.addActionListener(e -> handleBedAction(bed, bedButton));
+                Bed bedRef = bed;
+                JButton btnRef = bedButton;
+
+                bedButton.addActionListener(e->handleBedAction(bedRef,btnRef));
 
                 roomPanel.add(bedButton);
-                bedButtons.put(bedID, bedButton);
+                bedButtons.put(bedID,bedButton);
             }
             wardPanel.add(roomPanel);
         }
-
         return wardPanel;
     }
 
-    private void updateBedButtons() {
-        for (String bedID : beds.keySet()) {
+    // update buttons
+    private void updateBedButtons()
+    {
+        for(String bedID:beds.keySet())
+        {
             Bed bed = beds.get(bedID);
-            JButton button = bedButtons.get(bedID);
+            JButton btn = bedButtons.get(bedID);
+            if(btn==null) continue;
 
-            if (bed.getResident() != null) {
-                String gender = bed.getResident().Gender;
-                button.setText("Occupied");
-                button.setBackground(gender.equalsIgnoreCase("M") ? Color.BLUE : Color.RED);
-                button.setForeground(Color.WHITE);
-            } else {
-                button.setText("Empty");
-                button.setBackground(Color.LIGHT_GRAY);
-                button.setForeground(Color.BLACK);
+            if(bed.getResident()!=null)
+            {
+                String g = bed.getResident().Gender;
+                btn.setText("Occupied");
+                btn.setBackground(g.equalsIgnoreCase("M")||g.equalsIgnoreCase("Male")?Color.BLUE:Color.RED);
+                btn.setForeground(Color.WHITE);
+            }
+            else
+            {
+                btn.setText("Empty");
+                btn.setBackground(Color.LIGHT_GRAY);
+                btn.setForeground(Color.BLACK);
             }
         }
     }
 
-    // bed actions
-    private void handleBedAction(Bed bed, JButton button) {
+    // handle bed action
+   private void handleBedAction(Bed bed,JButton button)
+    {
         List<String> actions = new ArrayList<>();
-
-        switch (currentUser.getRole()) {
-            case "Manager" -> actions.add("Add Resident");
-            case "Doctor" -> actions.add("Add Prescription");
-            case "Nurse" -> {
-                actions.add("Move Resident");
-                actions.add("Administer");
-            }
+        switch(currentUser.getRole())
+        {
+            case "Manager": actions.add("Add Resident"); break;
+            case "Doctor": actions.add("Add Prescription"); actions.add("Modify Prescription"); break;
+            case "Nurse": actions.add("Move Resident"); actions.add("Administer"); break;
         }
-
         actions.add("View Resident");
 
-        String choice = (String) JOptionPane.showInputDialog(
-                this,
-                "Select Action for " + bed.ID,
-                "Bed Actions",
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                actions.toArray(),
-                actions.get(0)
-        );
+        String choice = (String)JOptionPane.showInputDialog(this,"Select Action for "+bed.ID,
+                "Bed Actions",JOptionPane.PLAIN_MESSAGE,null,actions.toArray(),actions.get(0));
+        if(choice==null) return;
 
-        if (choice == null) return;
-
-        switch (choice) {
-            case "Add Resident" -> addResidentToBed(bed, button);
-            case "View Resident" -> viewResident(bed);
-            case "Move Resident" -> moveResident(bed);
-            case "Add Prescription" -> addPrescription(bed);
-            case "Administer" -> administer(bed);
+        switch(choice)
+        {
+            case "Add Resident": addResidentToBed(bed,button); break;
+            case "View Resident": viewResident(bed); break;
+            case "Move Resident": moveResident(bed); break;
+            case "Add Prescription": addPrescription(bed); break;
+            case "Modify Prescription": modifyPrescription(bed); break;
+            case "Administer": administerPrescription(bed); break;
+            default: showError("Unknown action: "+choice);
         }
     }
 
-    // manager stuff
-    private void addStaff() {
+    // Staff 
+    private void addStaff()
+    {
         String id = JOptionPane.showInputDialog("Staff ID:");
         String name = JOptionPane.showInputDialog("Name:");
-        String role = JOptionPane.showInputDialog("Role (Doctor/Nurse/Manager):");
+        String role = JOptionPane.showInputDialog("Role:");
         String user = JOptionPane.showInputDialog("Username:");
         String pass = JOptionPane.showInputDialog("Password:");
+        if(id==null||name==null||role==null||user==null||pass==null) return;
 
-        if (id == null || name == null || role == null || user == null || pass == null) return;
-
-        Staff newStaff = switch (role) {
-            case "Manager" -> new Manager(id, name, user, pass);
-            case "Doctor" -> new Doctor(id, name, user, pass);
-            case "Nurse" -> new Nurse(id, name, user, pass);
-            default -> null;
-        };
-
-        if (newStaff != null) {
-            staffList.add(newStaff);
-            saveStaffToCSV(newStaff);
-            log("Added staff: " + role + " (" + id + ")");
-            JOptionPane.showMessageDialog(this, "Staff added!");
+        Staff newStaff=null;
+        switch(role)
+        {
+            case "Manager": newStaff=new Manager(id,name,user,pass); break;
+            case "Doctor": newStaff=new Doctor(id,name,user,pass); break;
+            case "Nurse": newStaff=new Nurse(id,name,user,pass); break;
         }
+        if(newStaff!=null)
+        {
+            staffList.add(newStaff);
+            saveStaffListToCSV();
+            log("Added staff: "+role+" ("+id+")");
+            JOptionPane.showMessageDialog(this,"Staff added!");
+        }
+        else{ showError("Invalid role"); }
     }
 
-    private void addResidentAction() {
+    private void modifyStaff()
+    {
+        String userID=JOptionPane.showInputDialog("UserID:");
+        if(userID==null) return;
+
+        Staff s = staffList.stream().filter(st->st.getUserID().equals(userID)).findFirst().orElse(null);
+        if(s==null){ showError("Not found"); return; }
+
+        String name = JOptionPane.showInputDialog("New Name:",s.getName());
+        String role = JOptionPane.showInputDialog("New Role:",s.getRole());
+        String pass = JOptionPane.showInputDialog("New Password:",s.getPassword());
+
+        s.Name=name;
+        s.Role=role;
+        s.setPassword(pass);
+
+        saveStaffListToCSV();
+        log("Modified staff "+userID);
+        JOptionPane.showMessageDialog(this,"Staff updated!");
+    }
+
+    private void saveStaffListToCSV()
+    {
+        try(PrintWriter pw=new PrintWriter(new FileWriter(STAFF_FILE)))
+        {
+            for(Staff s:staffList)
+            {
+                pw.println(s.getID()+","+s.getName()+","+s.getRole()+","+s.getUserID()+","+s.getPassword());
+            }
+        }
+        catch(IOException e){ e.printStackTrace();}
+    }
+
+    // Residents / Prescriptions
+    private void addResidentAction()
+    {
         String bedID = JOptionPane.showInputDialog("Bed ID:");
+        if(bedID==null) return;
         Bed bed = beds.get(bedID);
-
-        if (bed == null) {
-            showError("Invalid Bed ID");
-            return;
-        }
-
-        if (!bed.isVacant()) {
-            showError("Bed is occupied");
-            return;
-        }
+        if(bed==null){ showError("Invalid Bed"); return; }
+        if(!bed.isVacant()){ showError("Occupied"); return; }
 
         String name = JOptionPane.showInputDialog("Resident Name:");
         String age = JOptionPane.showInputDialog("Age:");
         String gender = JOptionPane.showInputDialog("Gender (M/F):");
+        if(name==null||age==null||gender==null) return;
 
-        if (name == null || age == null || gender == null) return;
-
-        resident r = new resident(name, age, gender);
+        resident r = new resident(name,age,gender);
         bed.assignResident(r);
-        saveResidentToCSV(r, bedID);
-
+        saveResidentToCSV(r,bedID);
         updateBedButtons();
-        log("Added resident " + name + " to " + bedID);
+        log("Added resident "+name+" to "+bedID);
     }
 
-    private void addResidentToBed(Bed bed, JButton button) {
-        addResidentAction();
+    private void addResidentToBed(Bed bed,JButton button)
+    {
+        if(bed==null){ showError("Invalid Bed"); return; }
+        if(!bed.isVacant()){ showError("Occupied"); return; }
+
+        String name = JOptionPane.showInputDialog("Name:");
+        if(name==null) return;
+        String age = JOptionPane.showInputDialog("Age:");
+        if(age==null) return;
+        String gender = JOptionPane.showInputDialog("Gender:");
+        if(gender==null) return;
+
+        resident r = new resident(name,age,gender);
+        bed.assignResident(r);
+        saveResidentToCSV(r,bed.ID);
+        updateBedButtons();
+        log("Manager added resident "+name+" to "+bed.ID);
     }
 
-    // resident and meds
-    private void viewResident(Bed bed) {
+    private void viewResident(Bed bed)
+    {
+        if(bed==null||bed.getResident()==null){ showError("No resident"); return; }
         resident r = bed.getResident();
-        if (r == null) {
-            showError("Bed is empty");
-            return;
-        }
-
-        StringBuilder info = new StringBuilder("Name: " + r.Name + "\nAge: " + r.Age + "\nGender: " + r.Gender);
-
-        if (!r.prescription.isEmpty()) {
-            info.append("\nPrescriptions:");
-            for (Prescription p : r.prescription) {
-                info.append("\n- ").append(p.Name).append(" ").append(p.Dose).append(" @ ").append(p.Time);
-            }
-        }
-
-        JOptionPane.showMessageDialog(this, info.toString(), "Resident Info", JOptionPane.INFORMATION_MESSAGE);
+        StringBuilder sb = new StringBuilder();
+        sb.append("Name: ").append(r.Name).append("\n");
+        sb.append("Age: ").append(r.Age).append("\n");
+        sb.append("Gender: ").append(r.Gender).append("\n");
+        sb.append("Prescriptions:\n");
+        for(Prescription p:r.prescription){ sb.append(" - ").append(p.Name).append(" ").append(p.Dose).append(" @ ").append(p.Time).append("\n"); }
+        JOptionPane.showMessageDialog(this,sb.toString(),"Resident "+bed.ID,JOptionPane.INFORMATION_MESSAGE);
     }
 
-    private void addPrescription(Bed bed) {
-        if (bed.getResident() == null) {
-            showError("No resident here!");
-            return;
-        }
+    private void moveResident(Bed fromBed)
+    {
+        if(fromBed==null||fromBed.getResident()==null){ showError("Empty"); return; }
+        String toBedID=JOptionPane.showInputDialog("Dest Bed:");
+        if(toBedID==null) return;
+        Bed toBed=beds.get(toBedID);
+        if(toBed==null||!toBed.isVacant()){ showError("Invalid/Occupied"); return; }
 
+        toBed.assignResident(fromBed.getResident());
+        fromBed.removeResident();
+        saveAllResidentsToCSV();
+        updateBedButtons();
+        log("Moved resident from "+fromBed.ID+" to "+toBed.ID);
+    }
+
+    private void addPrescription(Bed bed)
+    {
+        if(bed.getResident()==null){ showError("No resident"); return; }
         String med = JOptionPane.showInputDialog("Medicine:");
         String dose = JOptionPane.showInputDialog("Dose:");
         String time = JOptionPane.showInputDialog("Time:");
+        if(med==null||dose==null||time==null) return;
 
-        if (med == null || dose == null || time == null) return;
-
-        Prescription p = new Prescription(med, dose, time);
+        Prescription p = new Prescription(med,dose,time);
         bed.getResident().addPresription(p);
-
-        saveResidentsCSV();
-        log(currentUser.getRole() + " gave " + med + " to " + bed.getResident().Name);
-    }
-
-    private void moveResident(Bed bed) {
-        if (bed.getResident() == null) {
-            showError("No resident here!");
-            return;
-        }
-
-        String targetID = JOptionPane.showInputDialog("Move to Bed ID:");
-        Bed target = beds.get(targetID);
-
-        if (target == null || !target.isVacant()) {
-            showError("Bad target bed!");
-            return;
-        }
-
-        target.assignResident(bed.getResident());
-        bed.assignResident(null);
-
+        savePrescriptionToCSV(bed.ID,p);
+        log(currentUser.getRole()+" prescribed "+med+" for "+bed.getResident().Name);
         updateBedButtons();
-        saveResidentsCSV();
-
-        log(currentUser.getRole() + " moved resident to " + targetID);
     }
 
-    private void administer(Bed bed) {
-        if (bed.getResident() == null) {
-            showError("No resident here!");
-            return;
+    private void modifyPrescription(Bed bed)
+    {
+        if(bed.getResident()==null||bed.getResident().prescription.isEmpty()){ showError("None"); return; }
+        resident r = bed.getResident();
+        String[] meds = r.prescription.stream().map(p->p.Name).toArray(String[]::new);
+        String selected = (String)JOptionPane.showInputDialog(this,"Select Prescription","Modify",
+                JOptionPane.PLAIN_MESSAGE,null,meds,meds[0]);
+        if(selected==null) return;
+
+        Prescription target = r.prescription.stream().filter(p->p.Name.equals(selected)).findFirst().orElse(null);
+        if(target==null) return;
+
+        String newMed = JOptionPane.showInputDialog("Medicine:",target.Name);
+        String newDose = JOptionPane.showInputDialog("Dose:",target.Dose);
+        String newTime = JOptionPane.showInputDialog("Time:",target.Time);
+
+        if(newMed!=null){ target.Name=newMed; }
+        if(newDose!=null){ target.Dose=newDose; }
+        if(newTime!=null){ target.Time=newTime; }
+
+        saveAllPrescriptionsToCSV();
+        log(currentUser.getRole()+" modified prescription for "+r.Name);
+        JOptionPane.showMessageDialog(this,"Updated");
+    }
+
+    private void administerPrescription(Bed bed)
+    {
+        if(bed.getResident()==null){ showError("No resident"); return; }
+        resident r = bed.getResident();
+        if(r.prescription.isEmpty()){ showError("None"); return; }
+
+        String[] meds = r.prescription.stream().map(p->p.Name+" ("+p.Dose+")").toArray(String[]::new);
+        String selected = (String)JOptionPane.showInputDialog(this,"Select to Administer","Administer",
+                JOptionPane.PLAIN_MESSAGE,null,meds,meds[0]);
+        if(selected==null) return;
+
+        Prescription target = null;
+        for(Prescription p:r.prescription){ if(selected.startsWith(p.Name)){ target=p; break; } }
+        if(target==null){ showError("Not found"); return; }
+
+        log("Administered "+target.Name+" to "+r.Name+" by "+currentUser.getRole()+" "+currentUser.getUserID());
+        saveAllPrescriptionsToCSV();
+        JOptionPane.showMessageDialog(this,"Administered "+target.Name);
+    }
+
+    
+    
+    // CSV save/load 
+    private void saveResidentToCSV(resident r,String bedID)
+    {
+        try(PrintWriter pw=new PrintWriter(new FileWriter(RESIDENT_FILE,true)))
+        {
+            pw.println(bedID+","+escapeCSV(r.Name)+","+escapeCSV(r.Age)+","+escapeCSV(r.Gender));
         }
-
-        String med = JOptionPane.showInputDialog("Medicine given:");
-        if (med == null) return;
-
-        log(currentUser.getRole() + " gave " + med + " to " + bed.getResident().Name);
+        catch(IOException e){ e.printStackTrace(); }
     }
 
-    // csv save/load
-    private void saveStaffToCSV(Staff s) {
-        try (PrintWriter pw = new PrintWriter(new FileWriter(STAFF_FILE, true))) {
-            pw.println(s.getID() + "," + s.getName() + "," + s.getRole() + "," + s.getUserID() + "," + s.getPassword());
-        } catch (IOException e) { e.printStackTrace(); }
-    }
-
-    private void saveResidentToCSV(resident r, String bedID) {
-        try (PrintWriter pw = new PrintWriter(new FileWriter(RESIDENT_FILE, true))) {
-            pw.println(bedID + "," + r.Name + "," + r.Age + "," + r.Gender);
-        } catch (IOException e) { e.printStackTrace(); }
-    }
-
-    private void saveResidentsCSV() {
-        try (PrintWriter pw = new PrintWriter(new FileWriter(RESIDENT_FILE))) {
-            for (Bed bed : beds.values()) {
-                if (bed.getResident() != null) {
+    private void saveAllResidentsToCSV()
+    {
+        try(PrintWriter pw=new PrintWriter(new FileWriter(RESIDENT_FILE)))
+        {
+            for(Bed bed:beds.values())
+            {
+                if(bed.getResident()!=null)
+                {
                     resident r = bed.getResident();
-                    pw.println(bed.ID + "," + r.Name + "," + r.Age + "," + r.Gender);
+                    pw.println(bed.ID+","+escapeCSV(r.Name)+","+escapeCSV(r.Age)+","+escapeCSV(r.Gender));
                 }
             }
-        } catch (IOException e) { e.printStackTrace(); }
+        }
+        catch(IOException e){ e.printStackTrace();}
+   }
+
+    private void savePrescriptionToCSV(String bedID,Prescription p)
+    {
+        try(PrintWriter pw=new PrintWriter(new FileWriter(PRESCRIPTION_FILE,true)))
+        {
+            pw.println(bedID+","+escapeCSV(p.Name)+","+escapeCSV(p.Dose)+","+escapeCSV(p.Time));
+        }
+        catch(IOException e){ e.printStackTrace(); }
     }
 
-    private List<Staff> loadStaffFromCSV(String filename) {
-        List<Staff> list = new ArrayList<>();
-        File file = new File(filename);
+    private void saveAllPrescriptionsToCSV()
+    {
+        try(PrintWriter pw=new PrintWriter(new FileWriter(PRESCRIPTION_FILE)))
+        {
+            for(Bed bed:beds.values())
+            {
+                if(bed.getResident()!=null)
+                {
+                    for(Prescription p:bed.getResident().prescription)
+                    {
+                        pw.println(bed.ID+","+escapeCSV(p.Name)+","+escapeCSV(p.Dose)+","+escapeCSV(p.Time));
+                    }
+                }
+            }
+        }
+        catch(IOException e){ e.printStackTrace();}
+    }
 
-        try {
-            if (!file.exists() || file.length() == 0) {
-                Staff defaultManager = new Manager("M01", "Default Manager", "manager", "1234");
-                list.add(defaultManager);
-                saveStaffToCSV(defaultManager);
-                System.out.println("No staff. Default manager created.");
+    private List<Staff> loadStaffFromCSV(String filename)
+    {
+        List<Staff> list = new ArrayList<>();
+        try
+        {
+            File file = new File(filename);
+            if(!file.exists()||file.length()==0)
+            {
+                Staff def = new Manager("M01","Default Manager","manager","1234");
+                list.add(def);
+                saveStaffListToCSV();
+                System.out.println("Default Manager created");
                 return list;
             }
-
             List<String> lines = Files.readAllLines(Paths.get(filename));
-
-            for (String line : lines) {
-                String[] parts = line.split(",");
-                String id = parts[0];
-                String name = parts[1];
-                String role = parts[2];
-                String user = parts[3];
-                String pass = parts[4];
-
-                Staff s = switch (role) {
-                    case "Manager" -> new Manager(id, name, user, pass);
-                    case "Doctor" -> new Doctor(id, name, user, pass);
-                    case "Nurse" -> new Nurse(id, name, user, pass);
-                    default -> null;
-                };
-
-                if (s != null) list.add(s);
+            for(String line:lines)
+            {
+                String[] p = line.split(",");
+                if(p.length<5) continue;
+                String id=p[0],name=p[1],role=p[2],user=p[3],pass=p[4];
+                Staff s=null;
+                switch(role){ case "Manager": s=new Manager(id,name,user,pass); break; case "Doctor": s=new Doctor(id,name,user,pass); break; case "Nurse": s=new Nurse(id,name,user,pass); break; }
+                if(s!=null) list.add(s);
             }
-
-        } catch (IOException e) { e.printStackTrace(); }
-
+        }
+        catch(IOException e){ e.printStackTrace(); }
         return list;
     }
 
-    private void loadResidentsFromCSV(String filename) {
-        try {
-            if (!Files.exists(Paths.get(filename))) return;
-
-            List<String> lines = Files.readAllLines(Paths.get(filename));
-            for (String line : lines) {
-                String[] parts = line.split(",", 4);
-                String bedID = parts[0];
-                String name = parts[1];
-                String age = parts[2];
-                String gender = parts[3];
-
-                resident r = new resident(name, age, gender);
+    private void loadResidentsFromCSV(String filename)
+    {
+        try
+        {
+            if(!Files.exists(Paths.get(filename))) return;
+            for(String line:Files.readAllLines(Paths.get(filename)))
+            {
+                String[] p=line.split(",",4);
+                if(p.length<4) continue;
+                String bedID=p[0];
+                resident r = new resident(p[1],p[2],p[3]);
                 Bed bed = beds.get(bedID);
-                if (bed != null) bed.assignResident(r);
+                if(bed!=null) bed.assignResident(r);
             }
-        } catch (IOException e) { e.printStackTrace(); }
+        }
+        catch(IOException e){ e.printStackTrace();}
     }
 
-    // helper stuff
-    private void log(String message) {
-        logArea.append(LocalDateTime.now() + " | " + message + "\n");
+    private void loadPrescriptionsFromCSV(String filename)
+    {
+        try
+        {
+            if(!Files.exists(Paths.get(filename))) return;
+            for(String line:Files.readAllLines(Paths.get(filename)))
+            {
+                String[] p=line.split(",",4);
+                if(p.length<4) continue;
+                String bedID=p[0];
+                Bed bed = beds.get(bedID);
+                if(bed!=null&&bed.getResident()!=null) bed.getResident().addPresription(new Prescription(p[1],p[2],p[3]));
+            }
+        }
+        catch(IOException e){ e.printStackTrace();}
     }
 
-    private void showError(String msg) {
-        JOptionPane.showMessageDialog(this, msg, "Error", JOptionPane.ERROR_MESSAGE);
+    // Utilites
+    private void log(String msg)
+    {
+        String entry = LocalDateTime.now()+" | "+msg;
+        logArea.append(entry+"\n");
+        try(PrintWriter pw=new PrintWriter(new FileWriter(LOG_FILE,true))){ pw.println(entry); }
+        catch(IOException ignored){}
     }
 
-    // main
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new CareHomeManagementSystem().setVisible(true));
+    private void showError(String msg){ JOptionPane.showMessageDialog(this,msg,"Error",JOptionPane.ERROR_MESSAGE); }
+    private String escapeCSV(String s){ if(s==null) return ""; return s.replace(",",";"); }
+
+    // Main
+    public static void main(String[] args)
+    {
+        SwingUtilities.invokeLater(()->new CareHomeManagementSystem().setVisible(true));
     }
 }

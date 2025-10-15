@@ -7,6 +7,7 @@ abstract class Staff {
     protected String Password;
     protected String Role;
 	
+    // Staff Class
     public Staff(String ID, String Name, String Role, String UserID, String Password) {
         this.ID = ID;
         this.Name = Name;
@@ -15,6 +16,7 @@ abstract class Staff {
         this.Password = Password;
     }
 
+    // Getter method
     public String getID() {
         return ID;
     }
@@ -26,7 +28,8 @@ abstract class Staff {
     public String getName() {
         return Name;
     }
-
+    
+    // Setter Method
     public void setPassword(String newPassword) {
         this.Password = newPassword;
     }
@@ -35,6 +38,7 @@ abstract class Staff {
         return UserID;
     }
 
+   
     public boolean login(String user, String pass) {
         return this.UserID.equals(user) && this.Password.equals(pass);
     }
