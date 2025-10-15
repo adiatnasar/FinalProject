@@ -1,4 +1,4 @@
-File Structure
+File Structure:
 
 FinalProject/
  ├── src/
@@ -93,5 +93,25 @@ system_log.txt (Logs all actions)
 The system automatically creates default files if they do not exist. All the data is saved automatically.
 
 
+References:
+
+Oracle. (2024). How to Use Swing Components (The Java™ Tutorials).
+https://docs.oracle.com/javase/tutorial/uiswing/components/
+
+Oracle. (2024). Java I/O (Input and Output) Tutorial.
+https://docs.oracle.com/javase/tutorial/essential/io/
+
+Oracle. (2024). Object-Oriented Programming Concepts.
+https://docs.oracle.com/javase/tutorial/java/concepts/
+
+Baeldung. (2024). Introduction to Java Swing.
+https://www.baeldung.com/java-swing
+
+W3Schools. (2024). Java File Handling.
+https://www.w3schools.com/java/java_files.asp
+
+Oracle. (2025). How to Use Buttons, Check Boxes, and Radio Buttons. Oracle Swing Tutorial. https://docs.oracle.com/javase/tutorial/uiswing/components/button.html
+
+ZetCode. (2024). Java Swing Basic Tutorial. Retrieved from https://zetcode.com/javaswing/
 
  
