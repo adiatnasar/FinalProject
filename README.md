@@ -49,25 +49,36 @@ The program starts with the login window. By default, there's one user (Username
 Manager Functions:
 
 After login, a Manager can:
+
 Add Staff – Create new staff accounts (Doctor, Nurse, or another Manager).
-Modify Staff – Change staff details such as name, role, or password.
+Modify Staff – Update staff details, including name, role, or password.
 Add Resident (by Bed ID) – Assign a new resident to any bed.
 Add Shift / Modify Shift – Assign or update work shifts for staff.
+
+By bed buttons-
+
 View Beds – See which beds are empty or occupied.
 
 Doctor Functions:
 
-Add Prescription – Add medicine for a resident.
-Modify Prescription – Change existing medicine details.
 View Resident – See patient information and prescriptions.
 View My Shift – Check assigned shift information.
 
+By clicking the Bed button, doctors can- 
+
+Add Prescription – Add medicine for a resident.
+Modify Prescription – Change existing medicine details.
+
 Nurse Functions:
+
+View My Shift – See their assigned working hours.
+
+By clicking the Bed button, nurses can- 
 
 Move Resident – Transfer a resident to another empty bed.
 Administer – Record that a prescription was given.
 View Resident – Check details and medicine list.
-View My Shift – See their assigned working hours.
+
 
 Bed & Ward System:
 
@@ -112,6 +123,8 @@ https://www.w3schools.com/java/java_files.asp
 
 Oracle. (2025). How to Use Buttons, Check Boxes, and Radio Buttons. Oracle Swing Tutorial. https://docs.oracle.com/javase/tutorial/uiswing/components/button.html
 
-ZetCode. (2024). Java Swing Basic Tutorial. Retrieved from https://zetcode.com/javaswing/
+ZetCode. (2024). Java Swing Basic Tutorial. https://zetcode.com/javaswing/
+
+ 
 
  
