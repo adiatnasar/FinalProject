@@ -5,7 +5,8 @@ public class Shift
     String date;
     String startTime;
     String endTime;
-
+    
+    // Shift Class
     public Shift(String staffID,String date,String startTime,String endTime)
     {
         this.staffID=staffID;

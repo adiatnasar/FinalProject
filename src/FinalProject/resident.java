@@ -1,5 +1,6 @@
 package FinalProject;
 import java.util.*;
+
    // Creates resident and add prescription to the resident
 public class resident {
 	public String Name;

@@ -321,7 +321,7 @@ public class CareHomeManagementSystem extends JFrame
     {
         String id = JOptionPane.showInputDialog("Staff ID:");
         String name = JOptionPane.showInputDialog("Name:");
-        String role = JOptionPane.showInputDialog("Role:");
+        String role = JOptionPane.showInputDialog("Role (Doctor/Nurse/Manager):");
         String user = JOptionPane.showInputDialog("Username:");
         String pass = JOptionPane.showInputDialog("Password:");
         if(id==null||name==null||role==null||user==null||pass==null) return;
@@ -377,6 +377,8 @@ public class CareHomeManagementSystem extends JFrame
     }
 
     // Residents / Prescriptions
+    
+    // Adding residents to bed
     private void addResidentAction()
     {
         String bedID = JOptionPane.showInputDialog("Bed ID:");
@@ -415,7 +417,8 @@ public class CareHomeManagementSystem extends JFrame
         updateBedButtons();
         log("Manager added resident "+name+" to "+bed.ID);
     }
-
+   
+    // View Resident information
     private void viewResident(Bed bed)
     {
         if(bed==null||bed.getResident()==null){ showError("No resident"); return; }
@@ -428,7 +431,8 @@ public class CareHomeManagementSystem extends JFrame
         for(Prescription p:r.prescription){ sb.append(" - ").append(p.Name).append(" ").append(p.Dose).append(" @ ").append(p.Time).append("\n"); }
         JOptionPane.showMessageDialog(this,sb.toString(),"Resident "+bed.ID,JOptionPane.INFORMATION_MESSAGE);
     }
-
+    
+    // Moving Bed
     private void moveResident(Bed fromBed)
     {
         if(fromBed==null||fromBed.getResident()==null){ showError("Empty"); return; }
@@ -443,7 +447,8 @@ public class CareHomeManagementSystem extends JFrame
         updateBedButtons();
         log("Moved resident from "+fromBed.ID+" to "+toBed.ID);
     }
-
+    
+    // Adding Prescription
     private void addPrescription(Bed bed)
     {
         if(bed.getResident()==null){ showError("No resident"); return; }
@@ -458,7 +463,8 @@ public class CareHomeManagementSystem extends JFrame
         log(currentUser.getRole()+" prescribed "+med+" for "+bed.getResident().Name);
         updateBedButtons();
     }
-
+    
+    // Modifying Prescription
     private void modifyPrescription(Bed bed)
     {
         if(bed.getResident()==null||bed.getResident().prescription.isEmpty()){ showError("None"); return; }
@@ -483,7 +489,8 @@ public class CareHomeManagementSystem extends JFrame
         log(currentUser.getRole()+" modified prescription for "+r.Name);
         JOptionPane.showMessageDialog(this,"Updated");
     }
-
+    
+    // Administer Medicine
     private void administerPrescription(Bed bed)
     {
         if(bed.getResident()==null){ showError("No resident"); return; }
@@ -594,7 +601,7 @@ public class CareHomeManagementSystem extends JFrame
         {
             if(!Files.exists(Paths.get(filename))) return;
             for(String line:Files.readAllLines(Paths.get(filename)))
-            {
+           {
                 String[] p=line.split(",",4);
                 if(p.length<4) continue;
                 String bedID=p[0];
@@ -604,10 +611,10 @@ public class CareHomeManagementSystem extends JFrame
             }
         }
         catch(IOException e){ e.printStackTrace();}
-    }
+     }
 
     private void loadPrescriptionsFromCSV(String filename)
-    {
+     {
         try
         {
             if(!Files.exists(Paths.get(filename))) return;
@@ -619,7 +626,7 @@ public class CareHomeManagementSystem extends JFrame
                 Bed bed = beds.get(bedID);
                 if(bed!=null&&bed.getResident()!=null) bed.getResident().addPresription(new Prescription(p[1],p[2],p[3]));
             }
-        }
+       }
         catch(IOException e){ e.printStackTrace();}
     }
 
